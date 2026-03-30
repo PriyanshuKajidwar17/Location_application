@@ -13,9 +13,21 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Device Info App',
+
       theme: ThemeData(
+        brightness: Brightness.light,
         primarySwatch: Colors.blue,
+        cardColor: Colors.white,
       ),
+
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        cardColor: const Color(0xFF1E1E1E),
+      ),
+
+      themeMode: ThemeMode.system, // 🔥 auto device theme
+
       home: const SplashScreen(),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:lottie/lottie.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -34,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  //Device ID
   Future<void> getDeviceId() async {
     final deviceInfo = DeviceInfoPlugin();
 
@@ -44,22 +44,23 @@ class _HomeScreenState extends State<HomeScreen> {
         deviceId = androidInfo.id ?? "Unknown Android ID";
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
-        deviceId = iosInfo.identifierForVendor ?? "Unknown iOS ID";
+        deviceId =
+            iosInfo.identifierForVendor ?? "Unknown iOS ID";
       }
     } catch (e) {
       deviceId = "Error fetching ID";
     }
   }
 
-  // Permission Handling
   Future<void> handleLocation() async {
     try {
-      PermissionStatus status = await Permission.location.request();
+      PermissionStatus status =
+      await Permission.location.request();
 
       if (status.isGranted) {
         await getLocation();
       } else if (status.isDenied) {
-        locationStatus = "Location permission denied";
+        locationStatus = "Permission denied";
       } else if (status.isPermanentlyDenied) {
         locationStatus = "Permission permanently denied";
         await openAppSettings();
@@ -69,10 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  //Get Location
   Future<void> getLocation() async {
     try {
-      Position position = await Geolocator.getCurrentPosition(
+      Position position =
+      await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
@@ -87,77 +88,150 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Home Page"),
-        centerTitle: true,
-      ),
-
       body: isLoading
+          ? buildShimmer()
+          : RefreshIndicator(
+        onRefresh: initData,
+        child: SingleChildScrollView(
+          physics:
+          const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 30),
 
-      // LOTTIE LOADING SCREEN (NEW)
-          ? Center(
-        child: Lottie.network(
-          "https://assets10.lottiefiles.com/packages/lf20_usmfx6bp.json",
-          height: 200,
-        ),
-      )
-
-      //MAIN CONTENT
-          : Stack(
-        children: [
-
-          // CENTER CONTENT
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Device Information",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                Text(
+                  "Device Details",
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
 
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                  Text(
-                    "Device ID:\n$deviceId",
-                    textAlign: TextAlign.center,
-                  ),
+                buildCard(
+                  icon: Icons.phone_android,
+                  title: "Device ID",
+                  value: deviceId,
+                  color: Colors.blue,
+                ),
 
-                  const SizedBox(height: 15),
+                buildCard(
+                  icon: Icons.location_on,
+                  title: "Latitude",
+                  value: latitude,
+                  color: Colors.green,
+                ),
 
-                  Text("Latitude: $latitude"),
-                  Text("Longitude: $longitude"),
+                buildCard(
+                  icon: Icons.explore,
+                  title: "Longitude",
+                  value: longitude,
+                  color: Colors.orange,
+                ),
 
-                  const SizedBox(height: 20),
+                buildCard(
+                  icon: locationStatus ==
+                      "Location fetched successfully"
+                      ? Icons.check_circle
+                      : Icons.error,
+                  title: "Status",
+                  value: locationStatus,
+                  color: locationStatus ==
+                      "Location fetched successfully"
+                      ? Colors.green
+                      : Colors.red,
+                ),
 
-                  Text(
-                    locationStatus,
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                const SizedBox(height: 120),
+
+                Lottie.network(
+                  "https://assets2.lottiefiles.com/packages/lf20_tfb3estd.json",
+                )
+              ],
             ),
           ),
+        ),
+      ),
+    );
+  }
 
-          //DIFFERENT BOTTOM ANIMATION
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Lottie.network(
-                "https://assets2.lottiefiles.com/packages/lf20_tfb3estd.json",
-                height: 140,
-                repeat: true,
+  // 🔥 SHIMMER (Dark mode supported)
+  Widget buildShimmer() {
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: List.generate(4, (index) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 15),
+            child: Shimmer.fromColors(
+              baseColor:
+              isDark ? Colors.grey[800]! : Colors.grey[300]!,
+              highlightColor:
+              isDark ? Colors.grey[700]! : Colors.grey[100]!,
+              child: Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius:
+                  BorderRadius.circular(15),
+                ),
               ),
             ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // 🔥 CARD (Dark mode fixed)
+  Widget buildCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black54 : Colors.black12,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.2),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(
+          title,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
       ),
     );
   }
